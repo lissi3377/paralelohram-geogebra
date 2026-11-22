@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Побудова паралелограма за серединами трьох сторін — GeoGebra</title>
+<style>
+:root{--ink:#14253b;--muted:#52637a;--blue:#1d5ab3;--line:#dae2ed;--bg:#f3f6fb;--gold:#a96b0d}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:system-ui,-apple-system,Segoe UI,Arial,sans-serif;color:var(--ink)}
+header{max-width:1230px;margin:auto;padding:22px 22px 10px}h1{font-size:clamp(21px,3vw,31px);line-height:1.2;margin:0 0 6px}header p{color:var(--muted);margin:0 0 10px;font-size:15px}
+main{max-width:1230px;padding:10px 22px 26px;margin:auto;display:grid;grid-template-columns:minmax(480px,1.5fr) minmax(310px,1fr);gap:18px}
+.stage,.panel{background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:0 3px 17px #17314b0b;overflow:hidden}
+.stage-head{padding:13px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13px;color:var(--muted)}
+#ggb-element{width:100%;height:620px;position:relative;background:#fff}.loading{padding:60px 20px;text-align:center;color:var(--muted)}
+.controls{padding:15px;display:flex;flex-wrap:wrap;gap:9px;border-top:1px solid var(--line)}button{appearance:none;border:1px solid #cdd9e8;background:white;color:var(--ink);padding:11px 14px;border-radius:10px;font-weight:650;font-size:14px;cursor:pointer}button:hover:not(:disabled){background:#edf4ff}button.primary{background:var(--blue);color:white;border-color:var(--blue)}button.primary:hover:not(:disabled){background:#184b94}button:disabled{opacity:.4;cursor:not-allowed}
+.panel{padding:20px;display:flex;flex-direction:column;gap:15px}.eyebrow{font-size:12px;text-transform:uppercase;letter-spacing:1.2px;font-weight:800;color:var(--blue)}#step-title{font-size:24px;font-weight:750;line-height:1.22;margin:0}#instruction{font-size:17px;line-height:1.55;margin:0}#why{background:#f0f6ff;border-left:4px solid var(--blue);padding:13px 15px;font-size:15px;line-height:1.55;border-radius:0 9px 9px 0}.muted{color:var(--muted);font-size:14px;line-height:1.6}.progress{display:flex;gap:5px} .dot{height:7px;flex:1;background:#e2e8f2;border-radius:10px}.dot.done{background:#3f7ed2}.nav{display:flex;flex-wrap:wrap;gap:7px}.nav button{padding:7px 11px;font-weight:600}.nav button.active{background:#e6f0ff;border-color:#8cb3e8;color:#123d76}.hint{padding-top:12px;border-top:1px solid var(--line);font-size:14px;line-height:1.55}.hint strong{color:#234879}footer{max-width:1230px;padding:0 22px 24px;margin:auto;color:var(--muted);font-size:13px;line-height:1.6}
+@media(max-width:850px){main{grid-template-columns:1fr}.panel{order:-1}#ggb-element{height:460px}}
+.explanation summary{cursor:pointer;color:var(--blue);font-size:14px;font-weight:600}.explanation[open] summary{margin-bottom:10px}
+</style>
+<script src="https://www.geogebra.org/apps/deployggb.js"></script>
+</head>
+<body>
+<header><h1>Побудова паралелограма за серединами трьох сторін</h1><p>8 клас · «Інтелект України» · інтерактивна покрокова побудова в GeoGebra</p></header>
+<main>
+<section class="stage">
+ <span id="status" hidden></span>
+ <div id="ggb-element"><div class="loading">Ініціалізація GeoGebra… Для роботи потрібне підключення до інтернету.</div></div>
+ <div class="controls"><button id="back" onclick="go(-1)">← Назад</button><button id="next" class="primary" onclick="go(1)">Наступний крок →</button><button id="play" onclick="togglePlay()">▶ Анімація</button><button onclick="restart()">↺ Спочатку</button><button onclick="resetPoints()">Відновити рисунок</button></div>
+</section>
+<aside class="panel">
+ <div class="eyebrow">Три правильні варіанти</div><div class="nav" id="variant-nav" aria-label="Варіант побудови"></div><div class="muted" id="variant-description"></div>
+ <div class="eyebrow" id="count">КРОК 1 ІЗ 10</div><div class="progress" id="progress"></div>
+ <h2 id="step-title">Умова</h2><p id="instruction"></p><details class="explanation"><summary>Показати пояснення</summary><div id="why"></div></details>
+ <div class="eyebrow">Перейти до кроку</div><div class="nav" id="step-nav"></div>
+ <div class="hint"><strong>Для дослідження:</strong> після завершення побудови змінюйте положення M, N або K. Паралелограм перебудовується автоматично. Якщо точки лежать на одній прямій, невироджений паралелограм не визначається.</div>
+</aside>
+</main>
+<script>
+let api=null, step=0, timer=null, variant=0, ready=false;
+const variants=[
+ {a:'M',b:'N',c:'K',pair:'MK'},
+ {a:'M',b:'K',c:'N',pair:'MN'},
+ {a:'N',b:'M',c:'K',pair:'NK'}
+];
+let steps=[];
+const stages=[['axis',1],['O',2],['aux1',3],['aux2',3],['p',4],['q',4],['B',5],['A',6],['segAB',6],['C',7],['segBC',7],['D',8],['segCD',8],['segDA',8],['diagAC',9],['diagBD',9]];
+function objectName(base,v=variant){return base+(v+1)}
+function makeSteps(){
+ const {a,b,c,pair}=variants[variant];
+ return [
+ {t:'Дано три середини',i:`У цьому варіанті ${a} — середина AB, ${b} — середина BC, ${c} — середина CD. Знайдемо вершини A, B, C, D.`,w:`Серединами протилежних сторін обрано ${a} і ${c}. Інший вибір цієї пари дає інший паралелограм.`},
+ {t:`З’єднуємо ${a} і ${c}`,i:`Побудуйте відрізок ${pair}, що сполучає середини протилежних сторін AB і CD.`,w:'Середини протилежних сторін паралелограма симетричні відносно його центра.'},
+ {t:'Знаходимо центр O',i:`Побудуйте O — середину відрізка ${pair}.`,w:`Точка O є центром шуканого паралелограма, отже також серединою діагоналі AC.`},
+ {t:'Допоміжні відрізки',i:`Проведіть відрізки ${a}O та O${b}.`,w:`У трикутнику ABC точки ${a}, ${b}, O — середини AB, BC, AC. Тому ${a}O ∥ BC, а O${b} ∥ AB.`},
+ {t:'Проводимо паралельні прямі',i:`Через ${a} проведіть пряму, паралельну O${b}. Через ${b} — пряму, паралельну ${a}O.`,w:`Перша пряма містить сторону AB, друга — сторону BC.`},
+ {t:'Знаходимо вершину B',i:'Позначте B — точку перетину проведених прямих.',w:'B — спільна вершина сторін AB і BC.'},
+ {t:'Відновлюємо вершину A',i:`Побудуйте A, симетричну B відносно ${a}; з’єднайте A з B.`,w:`${a} — середина AB, тому A${a} = ${a}B.`},
+ {t:'Відновлюємо вершину C',i:`Побудуйте C, симетричну B відносно ${b}; з’єднайте B з C.`,w:`${b} — середина BC, тому B${b} = ${b}C.`},
+ {t:'Відновлюємо вершину D',i:`Побудуйте D, симетричну C відносно ${c}; з’єднайте C з D та D з A.`,w:`${c} — середина CD. Оскільки O — середина AC і відрізка ${pair}, то O також є серединою BD. Діагоналі діляться навпіл, отже ABCD — паралелограм.`},
+ {t:'Побудову завершено!',i:'Переміщуйте M, N, K або оберіть інший варіант і порівняйте результати.',w:`${a} — середина AB, ${b} — середина BC, ${c} — середина CD. Діагоналі AC і BD перетинаються в їхній спільній середині O.`}
+ ];
+}
+function safe(command){if(!api.evalCommand(command))throw new Error('Не вдалося виконати команду: '+command)}
+function setup(g){api=g;try{
+ api.setErrorDialogsActive(false);
+ api.setCoordSystem(-1.5,13,-4,15);api.setGridVisible(true);api.setAxesVisible(false,false);
+ safe('M=(3,5)');safe('N=(7,9)');safe('K=(6,3)');
+ for(const x of ['M','N','K']){api.setColor(x,27,91,181);api.setPointSize(x,6);api.setLabelVisible(x,true);api.setLabelStyle(x,0)}
+ for(let v=0;v<variants.length;v++){
+  const {a,b,c}=variants[v], n=base=>objectName(base,v);
+  const create=(base,expr)=>{safe(n(base)+'='+expr);api.setVisible(n(base),false)};
+  create('axis',`Segment(${a},${c})`);create('O',`Midpoint(${a},${c})`);
+  create('aux1',`Segment(${a},${n('O')})`);create('aux2',`Segment(${n('O')},${b})`);
+  create('helper1',`Line(${n('O')},${b})`);create('helper2',`Line(${a},${n('O')})`);
+  create('p',`Line(${a},${n('helper1')})`);create('q',`Line(${b},${n('helper2')})`);
+  create('B',`Intersect(${n('p')},${n('q')})`);
+  create('A',`Reflect(${n('B')},${a})`);create('C',`Reflect(${n('B')},${b})`);create('D',`Reflect(${n('C')},${c})`);
+  for(const [base,u,w] of [['segAB','A','B'],['segBC','B','C'],['segCD','C','D'],['segDA','D','A'],['diagAC','A','C'],['diagBD','B','D']])create(base,`Segment(${n(u)},${n(w)})`);
+  for(const [base] of stages){
+   const name=n(base);
+   if(['O','A','B','C','D'].includes(base)){
+    api.setColor(name,...(base==='O'?[150,58,144]:[198,67,47]));api.setPointSize(name,5);
+    api.setCaption(name,base);api.setLabelStyle(name,3);api.setLabelVisible(name,true);
+   }else{
+    api.setLabelVisible(name,false);
+    const side=base.startsWith('seg'),diag=base.startsWith('diag'),parallel=['p','q'].includes(base);
+    api.setColor(name,...(side?[29,90,179]:diag?[131,139,156]:parallel?[205,126,37]:[127,91,163]));
+    api.setLineThickness(name,side?5:diag?2:3);if(diag)api.setLineStyle(name,1);
+   }
+  }
+ }
+ ready=true;show(0);updateStatus();api.registerUpdateListener('updateStatus');
+ }catch(e){ready=false;document.getElementById('status').textContent='Помилка побудови: '+e.message;console.error(e)}
+}
+function updateStatus(){
+ if(!ready)return;
+ const mx=api.getXcoord('M'),my=api.getYcoord('M'),nx=api.getXcoord('N'),ny=api.getYcoord('N'),kx=api.getXcoord('K'),ky=api.getYcoord('K');
+ const cross=(nx-mx)*(ky-my)-(ny-my)*(kx-mx);
+ const scale=Math.max(1,Math.hypot(nx-mx,ny-my)*Math.hypot(kx-mx,ky-my));
+ document.getElementById('status').textContent=Math.abs(cross)<1e-9*scale?'Точки на одній прямій: паралелограм вироджений':`Варіант ${variant+1} · Готово до роботи`;
+}
+function show(idx){
+ steps=makeSteps();step=Math.max(0,Math.min(steps.length-1,idx));const s=steps[step];
+ document.getElementById('count').textContent=`ВАРІАНТ ${variant+1} · КРОК ${step+1} ІЗ ${steps.length}`;
+ document.getElementById('step-title').textContent=s.t;document.getElementById('instruction').textContent=s.i;
+ document.getElementById('why').innerHTML='<strong>Чому це правильно?</strong> '+s.w;
+ document.getElementById('back').disabled=step===0;document.getElementById('next').disabled=step===steps.length-1;
+ document.getElementById('progress').innerHTML=steps.map((_,i)=>`<div class="dot ${i<=step?'done':''}"></div>`).join('');
+ document.getElementById('step-nav').innerHTML=steps.map((_,i)=>`<button class="${i===step?'active':''}" onclick="stopPlay();show(${i})">${i+1}</button>`).join('');
+ document.getElementById('variant-nav').innerHTML=variants.map((v,i)=>`<button aria-pressed="${i===variant}" class="${i===variant?'active':''}" onclick="selectVariant(${i})">${i+1}. Протилежні: ${v.pair}</button>`).join('');
+ const {a,b,c}=variants[variant];document.getElementById('variant-description').textContent=`${a} — середина AB; ${b} — середина BC; ${c} — середина CD.`;
+ if(ready){for(let v=0;v<variants.length;v++)for(const [name,k] of stages)api.setVisible(objectName(name,v),v===variant&&step>=k)}
+}
+function selectVariant(v){if(!Number.isInteger(v)||v<0||v>=variants.length)return;stopPlay();variant=v;show(0);updateStatus()}
+function go(d){stopPlay();show(step+d)}
+function stopPlay(){if(timer){clearInterval(timer);timer=null}document.getElementById('play').textContent='▶ Анімація'}
+function togglePlay(){if(timer){stopPlay();return}if(step>=steps.length-1)show(0);document.getElementById('play').textContent='⏸ Пауза';timer=setInterval(()=>{show(step+1);if(step>=steps.length-1)stopPlay()},2600)}
+function restart(){stopPlay();show(0)}
+function resetPoints(){stopPlay();if(ready){api.setCoords('M',3,5);api.setCoords('N',7,9);api.setCoords('K',6,3);api.setCoordSystem(-1.5,13,-4,15)}show(0);updateStatus()}
+window.addEventListener('load',()=>{
+ show(0);
+ if(typeof GGBApplet==='undefined'){document.getElementById('status').textContent='Немає доступу до GeoGebra';return}
+ const params={id:'ggbApplet',appName:'classic',perspective:'G',width:700,height:620,scaleContainerClass:'stage',autoHeight:false,showToolBar:false,showAlgebraInput:false,showMenuBar:false,showResetIcon:false,enableRightClick:false,enableShiftDragZoom:true,showZoomButtons:true,showFullscreenButton:true,language:'uk',borderColor:'#ffffff',appletOnLoad:setup};
+ const applet=new GGBApplet(params,true);applet.inject('ggb-element');
+});
+
+</script>
+</body></html>
+
+
+
